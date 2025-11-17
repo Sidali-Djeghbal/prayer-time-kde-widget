@@ -45,7 +45,7 @@
 
 1. **Download or clone the widget:**
    ```bash
-   git clone https://github.com/yourusername/prayer-times-kde-widget.git
+   git clone https://github.com/Sidali-Djeghbal/prayer-times-kde-widget.git
    cd prayer-times-kde-widget
    ```
 
