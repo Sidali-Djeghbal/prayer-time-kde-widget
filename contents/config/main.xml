@@ -10,22 +10,28 @@
       <default>aladhan</default>
     </entry>
     <entry name="city" type="String">
-      <default>London</default>
+      <default></default>
     </entry>
     <entry name="country" type="String">
-      <default>UK</default>
+      <default></default>
     </entry>
     <entry name="latitude" type="Double">
-      <default>51.5074</default>
+      <default>0</default>
     </entry>
     <entry name="longitude" type="Double">
-      <default>-0.1278</default>
+      <default>0</default>
     </entry>
     <entry name="calculationMethod" type="Int">
-      <default>2</default>
+      <default>3</default>
     </entry>
     <entry name="notificationMinutes" type="Int">
       <default>15</default>
+    </entry>
+    <entry name="useArabic" type="Bool">
+      <default>false</default>
+    </entry>
+    <entry name="lastFetchDate" type="String">
+      <default></default>
     </entry>
   </group>
 </kcfg>
