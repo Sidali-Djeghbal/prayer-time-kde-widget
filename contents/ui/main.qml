@@ -50,46 +50,116 @@ PlasmoidItem {
     
     Timer {
         id: fetchTimer
-        interval: 3600000 // check every 1 heur
+        interval: 3600000 
         running: true
         repeat: true
         onTriggered: checkAndFetchPrayerTimes()
     }
     
     Component.onCompleted: {
-        // Try to auto get location if not set
-        if (latitude === 0 && longitude === 0) {
-            fetchLocation()
+        // only fetch location if not set, otherwise just fetch prayer times
+        if (latitude === 0 && longitude === 0 && !locationFetched) {
+            console.log("Location not set, skipping auto-fetch")
+            // Don't auto-fetch on startup to avoid 403 errors
+            // User must manually click "Detect My Location"
         } else {
             fetchPrayerTimes()
         }
     }
     
     function fetchLocation() {
+        console.log("Attempting to fetch location...")
+        
+        // try ipapi.co first
         var xhr = new XMLHttpRequest()
         xhr.open("GET", "https://ipapi.co/json/")
+        xhr.timeout = 5000
+        
         xhr.onreadystatechange = function() {
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 if (xhr.status === 200) {
-                    var response = JSON.parse(xhr.responseText)
-                    if (response.latitude && response.longitude) {
-                        latitude = response.latitude
-                        longitude = response.longitude
-                        city = response.city || ""
-                        country = response.country_name || ""
-                        
-                        // Save to config
-                        Plasmoid.configuration.latitude = latitude
-                        Plasmoid.configuration.longitude = longitude
-                        Plasmoid.configuration.city = city
-                        Plasmoid.configuration.country = country
-                        
-                        locationFetched = true
-                        fetchPrayerTimes()
+                    try {
+                        var response = JSON.parse(xhr.responseText)
+                        if (response.latitude && response.longitude) {
+                            latitude = response.latitude
+                            longitude = response.longitude
+                            city = response.city || ""
+                            country = response.country_name || ""
+                            
+                            // save to config
+                            Plasmoid.configuration.latitude = latitude
+                            Plasmoid.configuration.longitude = longitude
+                            Plasmoid.configuration.city = city
+                            Plasmoid.configuration.country = country
+                            
+                            locationFetched = true
+                            console.log("Location detected: " + city + ", " + country)
+                            fetchPrayerTimes()
+                        }
+                    } catch (e) {
+                        console.log("Error parsing location response: " + e)
+                        tryAlternativeLocationService()
                     }
+                } else if (xhr.status === 403 || xhr.status === 429) {
+                    console.log("Rate limited, trying alternative service")
+                    tryAlternativeLocationService()
+                } else {
+                    console.log("Location fetch failed with status: " + xhr.status)
+                    tryAlternativeLocationService()
                 }
             }
         }
+        
+        xhr.ontimeout = function() {
+            console.log("Location fetch timed out")
+            tryAlternativeLocationService()
+        }
+        
+        xhr.onerror = function() {
+            console.log("Network error during location fetch")
+            tryAlternativeLocationService()
+        }
+        
+        xhr.send()
+    }
+    
+    function tryAlternativeLocationService() {
+        console.log("Trying alternative location service...")
+        
+        var xhr = new XMLHttpRequest()
+        xhr.open("GET", "https://ipwhois.app/json/")
+        xhr.timeout = 5000
+        
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                if (xhr.status === 200) {
+                    try {
+                        var response = JSON.parse(xhr.responseText)
+                        if (response.latitude && response.longitude) {
+                            latitude = parseFloat(response.latitude)
+                            longitude = parseFloat(response.longitude)
+                            city = response.city || ""
+                            country = response.country || ""
+                            
+                            // Save to config
+                            Plasmoid.configuration.latitude = latitude
+                            Plasmoid.configuration.longitude = longitude
+                            Plasmoid.configuration.city = city
+                            Plasmoid.configuration.country = country
+                            
+                            locationFetched = true
+                            console.log("Location detected via alternative service: " + city + ", " + country)
+                            fetchPrayerTimes()
+                        }
+                    } catch (e) {
+                        console.log("Error parsing alternative location response: " + e)
+                    }
+                } else {
+                    console.log("Alternative location service also failed with status: " + xhr.status)
+                }
+            }
+        }
+        
         xhr.send()
     }
     
@@ -97,7 +167,7 @@ PlasmoidItem {
         var now = new Date()
         var lastFetchDate = new Date(Plasmoid.configuration.lastFetchDate || 0)
         
-        // fetching if its a new day 
+        // fetching if its a new day
         if (now.getDate() !== lastFetchDate.getDate() || 
             now.getMonth() !== lastFetchDate.getMonth() ||
             now.getFullYear() !== lastFetchDate.getFullYear()) {
@@ -111,13 +181,15 @@ PlasmoidItem {
             return
         }
         
+        console.log("Fetching prayer times for lat: " + latitude + ", lon: " + longitude)
+        
         if (apiService === "aladhan") {
             fetchFromAladhan()
         } else {
             fetchFromSalahHour()
         }
         
-        // save fetch date (checkpoint)
+        // save fetch date
         Plasmoid.configuration.lastFetchDate = new Date().toString()
     }
     
@@ -126,25 +198,46 @@ PlasmoidItem {
         var date = new Date()
         var timestamp = Math.floor(date.getTime() / 1000)
         
-        // uuse coordinates for more precised times
+        // using coordinates for more precise times
         var url = "http://api.aladhan.com/v1/timings/" + timestamp + 
                   "?latitude=" + latitude + 
                   "&longitude=" + longitude + 
                   "&method=" + calculationMethod
         
+        console.log("Fetching from Al-Adhan: " + url)
+        
         xhr.open("GET", url)
+        xhr.timeout = 10000
+        
         xhr.onreadystatechange = function() {
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 if (xhr.status === 200) {
-                    var response = JSON.parse(xhr.responseText)
-                    if (response.data && response.data.timings) {
-                        parsePrayerTimes(response.data.timings)
+                    try {
+                        var response = JSON.parse(xhr.responseText)
+                        console.log("Al-Adhan response received")
+                        if (response.data && response.data.timings) {
+                            console.log("Prayer times found: " + JSON.stringify(response.data.timings))
+                            parsePrayerTimes(response.data.timings)
+                        } else {
+                            console.log("Invalid response structure")
+                        }
+                    } catch (e) {
+                        console.log("Error parsing Al-Adhan response: " + e)
                     }
                 } else {
-                    console.log("Failed to fetch prayer times from Al-Adhan")
+                    console.log("Failed to fetch prayer times from Al-Adhan, status: " + xhr.status)
                 }
             }
         }
+        
+        xhr.ontimeout = function() {
+            console.log("Al-Adhan request timed out")
+        }
+        
+        xhr.onerror = function() {
+            console.log("Network error fetching from Al-Adhan")
+        }
+        
         xhr.send()
     }
     
@@ -177,6 +270,8 @@ PlasmoidItem {
     }
     
     function parsePrayerTimes(timings) {
+        console.log("Parsing prayer times...")
+        
         // extract time only (remove timezone and other info)
         prayerTimes = {
             "Fajr": extractTime(timings.Fajr),
@@ -186,33 +281,52 @@ PlasmoidItem {
             "Isha": extractTime(timings.Isha)
         }
         
+        console.log("Parsed prayer times: " + JSON.stringify(prayerTimes))
+        
         findNextPrayer()
     }
     
     function extractTime(timeString) {
         // extract HH:MM from formats like "04:45 (EST)" or "04:45"
-        if (!timeString) return "00:00"
-        var match = timeString.match(/(\d{2}:\d{2})/)
-        return match ? match[1] : timeString.substring(0, 5)
+        if (!timeString) {
+            console.log("Empty time string received")
+            return "00:00"
+        }
+        
+        // try to match HH:MM pattern
+        var match = timeString.match(/(\d{1,2}:\d{2})/)
+        var result = match ? match[1] : timeString.substring(0, 5)
+        console.log("Extracted time from '" + timeString + "' -> '" + result + "'")
+        return result
     }
     
     function findNextPrayer() {
+        console.log("Finding next prayer...")
+        
         var now = new Date()
         var currentMinutes = now.getHours() * 60 + now.getMinutes()
+        
+        console.log("Current time: " + now.getHours() + ":" + now.getMinutes() + " (" + currentMinutes + " minutes)")
         
         var prayers = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
         
         for (var i = 0; i < prayers.length; i++) {
             var prayer = prayers[i]
             var time = prayerTimes[prayer]
-            if (!time) continue
+            if (!time) {
+                console.log("No time for " + prayer)
+                continue
+            }
             
             var parts = time.split(":")
             var prayerMinutes = parseInt(parts[0]) * 60 + parseInt(parts[1])
             
+            console.log(prayer + " at " + time + " (" + prayerMinutes + " minutes)")
+            
             if (prayerMinutes > currentMinutes) {
                 nextPrayer = prayer
                 nextPrayerTime = time
+                console.log("Next prayer is: " + nextPrayer + " at " + nextPrayerTime)
                 updateCountdown()
                 return
             }
@@ -221,6 +335,7 @@ PlasmoidItem {
         // if no prayers left today, next is Fajr tomorrow
         nextPrayer = "Fajr"
         nextPrayerTime = prayerTimes.Fajr || "00:00"
+        console.log("All prayers passed, next is Fajr tomorrow at " + nextPrayerTime)
         updateCountdown()
     }
     
@@ -235,6 +350,7 @@ PlasmoidItem {
         prayerTime.setSeconds(0)
         prayerTime.setMilliseconds(0)
         
+        // check if prayer is tomorrow
         if (prayerTime <= now) {
             prayerTime.setDate(prayerTime.getDate() + 1)
         }
@@ -257,7 +373,6 @@ PlasmoidItem {
             showNotification(nextPrayer, minutesUntil)
         }
         
-        // reeset notification flag when prayer time passes
         if (minutesUntil === 0) {
             notificationShown = false
         }

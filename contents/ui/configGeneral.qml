@@ -235,6 +235,7 @@ KCM.SimpleKCM {
         locationStatus.text = " Detecting location..."
         locationStatus.color = Kirigami.Theme.neutralTextColor
         
+        // try ipapi.co first
         var xhr = new XMLHttpRequest()
         xhr.open("GET", "https://ipapi.co/json/")
         xhr.timeout = 10000
@@ -258,24 +259,77 @@ KCM.SimpleKCM {
                     } catch (e) {
                         locationStatus.text = "✗ Error parsing location data"
                         locationStatus.color = Kirigami.Theme.negativeTextColor
+                        console.log("Parse error: " + e)
                     }
+                } else if (xhr.status === 403 || xhr.status === 429) {
+                    // Rate limited, try alternative
+                    locationStatus.text = " Trying alternative service..."
+                    tryAlternativeLocation()
                 } else {
                     locationStatus.text = "✗ Failed to detect location (Error: " + xhr.status + ")"
                     locationStatus.color = Kirigami.Theme.negativeTextColor
+                    // Try alternative on any error
+                    tryAlternativeLocation()
                 }
             }
         }
         
         xhr.ontimeout = function() {
-            locationStatus.text = "✗ Location detection timed out"
-            locationStatus.color = Kirigami.Theme.negativeTextColor
+            locationStatus.text = " Request timed out, trying alternative..."
+            tryAlternativeLocation()
         }
         
         xhr.onerror = function() {
-            locationStatus.text = "✗ Network error - check your internet connection"
-            locationStatus.color = Kirigami.Theme.negativeTextColor
+            locationStatus.text = " Network error, trying alternative service..."
+            tryAlternativeLocation()
         }
         
         xhr.send()
+    }
+    
+    function tryAlternativeLocation() {
+        var xhr2 = new XMLHttpRequest()
+        xhr2.open("GET", "https://ipwhois.app/json/")
+        xhr2.timeout = 10000
+        
+        xhr2.onreadystatechange = function() {
+            if (xhr2.readyState === XMLHttpRequest.DONE) {
+                if (xhr2.status === 200) {
+                    try {
+                        var response = JSON.parse(xhr2.responseText)
+                        if (response.latitude && response.longitude) {
+                            latField.value = Math.round(parseFloat(response.latitude) * 10000)
+                            lonField.value = Math.round(parseFloat(response.longitude) * 10000)
+                            cityField.text = response.city || ""
+                            countryField.text = response.country || ""
+                            locationStatus.text = "✓ Location detected: " + response.city + ", " + response.country
+                            locationStatus.color = Kirigami.Theme.positiveTextColor
+                        } else {
+                            locationStatus.text = "✗ Could not detect location automatically. Please enter manually."
+                            locationStatus.color = Kirigami.Theme.negativeTextColor
+                        }
+                    } catch (e) {
+                        locationStatus.text = "✗ All location services failed. Please enter location manually."
+                        locationStatus.color = Kirigami.Theme.negativeTextColor
+                        console.log("Alternative parse error: " + e)
+                    }
+                } else {
+                    locationStatus.text = "✗ Location detection failed. Please enter your location manually."
+                    locationStatus.color = Kirigami.Theme.negativeTextColor
+                }
+            }
+        }
+        
+        xhr2.ontimeout = function() {
+            locationStatus.text = "✗ All services timed out. Please enter location manually."
+            locationStatus.color = Kirigami.Theme.negativeTextColor
+        }
+        
+        xhr2.onerror = function() {
+            locationStatus.text = "✗ Check your internet connection or enter location manually."
+            locationStatus.color = Kirigami.Theme.negativeTextColor
+        }
+        
+        xhr2.send()
     }
 }

@@ -110,11 +110,28 @@ ColumnLayout {
                 Item { Layout.fillWidth: true }
                 
                 PlasmaComponents3.Label {
-                    text: root.prayerTimes[modelData] || "--:--"
+                    text: {
+                        var time = root.prayerTimes[modelData]
+                        if (!time || time === "00:00") {
+                            return "--:--"
+                        }
+                        return time
+                    }
                     font.bold: modelData === root.nextPrayer
                     font.family: "monospace"
+                    color: (!root.prayerTimes[modelData] || root.prayerTimes[modelData] === "00:00") ? 
+                           Kirigami.Theme.disabledTextColor : Kirigami.Theme.textColor
                 }
             }
+        }
+        
+        PlasmaComponents3.Label {
+            text: root.useArabic ? "جاري التحميل..." : "Loading prayer times..."
+            font.italic: true
+            color: Kirigami.Theme.disabledTextColor
+            Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: Kirigami.Units.largeSpacing
+            visible: !root.prayerTimes.Fajr || root.prayerTimes.Fajr === "00:00"
         }
     }
     

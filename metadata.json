@@ -2,7 +2,11 @@
     "KPlugin": {
         "Authors": [
             {
-                "Name": "Sidali DJEGHBAL"
+                "Name": "Sidali DJEGHBAL",
+                "Github": "Sidali-Djeghbal",
+                "Name": "Void Shell 777",
+                "Github": "VoidShell777"
+
             }
         ],
         "Category": "Date and Time",
