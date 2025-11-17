@@ -6,26 +6,44 @@ import org.kde.kirigami as Kirigami
 
 ColumnLayout {
     id: fullRep
-    Layout.minimumWidth: Kirigami.Units.gridUnit * 16
-    Layout.minimumHeight: Kirigami.Units.gridUnit * 20
-    spacing: Kirigami.Units.largeSpacing
+    Layout.minimumWidth: Kirigami.Units.gridUnit * 18
+    Layout.minimumHeight: Kirigami.Units.gridUnit * 22
+    spacing: Kirigami.Units.smallSpacing
     
-    PlasmaExtras.Heading {
-        level: 3
-        text: root.useArabic ? "مواقيت الصلاة" : "Prayer Times"
-        Layout.alignment: Qt.AlignHCenter
-        font.family: root.useArabic ? "Noto Sans Arabic" : Kirigami.Theme.defaultFont.family
+    RowLayout {
+        Layout.fillWidth: true
+        Layout.margins: Kirigami.Units.smallSpacing
+        
+        PlasmaExtras.Heading {
+            level: 3
+            text: root.useArabic ? "مواقيت الصلاة" : "Prayer Times"
+            font.family: root.useArabic ? "Noto Sans Arabic" : Kirigami.Theme.defaultFont.family
+            Layout.fillWidth: true
+        }
+        
+        PlasmaComponents3.ToolButton {
+            icon.name: "preferences-desktop-locale"
+            text: root.useArabic ? "EN" : "عربي"
+            display: PlasmaComponents3.AbstractButton.TextBesideIcon
+            onClicked: {
+                root.useArabic = !root.useArabic
+                Plasmoid.configuration.useArabic = root.useArabic
+            }
+            PlasmaComponents3.ToolTip {
+                text: root.useArabic ? "Switch to English" : "التبديل إلى العربية"
+            }
+        }
     }
     
     Kirigami.Separator {
         Layout.fillWidth: true
     }
     
-    // Location info
     RowLayout {
         Layout.fillWidth: true
         Layout.leftMargin: Kirigami.Units.smallSpacing
         Layout.rightMargin: Kirigami.Units.smallSpacing
+        spacing: Kirigami.Units.smallSpacing
         
         Kirigami.Icon {
             source: "find-location"
@@ -34,11 +52,27 @@ ColumnLayout {
         }
         
         PlasmaComponents3.Label {
-            text: root.city ? (root.city + ", " + root.country) : 
-                  (root.latitude.toFixed(4) + ", " + root.longitude.toFixed(4))
+            text: {
+                if (!root.city && root.latitude === 0) {
+                    return root.useArabic ? "لم يتم تحديد الموقع" : "Location not set"
+                }
+                return root.city ? (root.city + ", " + root.country) : 
+                      (root.latitude.toFixed(4) + ", " + root.longitude.toFixed(4))
+            }
             font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-            color: Kirigami.Theme.disabledTextColor
+            color: (!root.city && root.latitude === 0) ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.disabledTextColor
             Layout.fillWidth: true
+        }
+        
+        PlasmaComponents3.ToolButton {
+            icon.name: "find-location-symbolic"
+            visible: !root.city && root.latitude === 0
+            onClicked: {
+                root.fetchLocation()
+            }
+            PlasmaComponents3.ToolTip {
+                text: root.useArabic ? "اكتشاف موقعي" : "Detect My Location"
+            }
         }
     }
     
@@ -115,13 +149,31 @@ ColumnLayout {
     
     Item { Layout.fillHeight: true }
     
-    PlasmaComponents3.Button {
-        text: root.useArabic ? "الإعدادات" : "Settings"
-        icon.name: "configure"
-        Layout.alignment: Qt.AlignHCenter
-        onClicked: {
-            root.expanded = false
-            Plasmoid.internalAction("configure").trigger()
+    RowLayout {
+        Layout.fillWidth: true
+        Layout.margins: Kirigami.Units.smallSpacing
+        spacing: Kirigami.Units.smallSpacing
+        
+        PlasmaComponents3.Button {
+            text: root.useArabic ? "تحديث" : "Refresh"
+            icon.name: "view-refresh"
+            Layout.fillWidth: true
+            onClicked: {
+                root.fetchPrayerTimes()
+            }
+            PlasmaComponents3.ToolTip {
+                text: root.useArabic ? "تحديث مواقيت الصلاة" : "Refresh prayer times"
+            }
+        }
+        
+        PlasmaComponents3.Button {
+            text: root.useArabic ? "الإعدادات" : "Settings"
+            icon.name: "configure"
+            Layout.fillWidth: true
+            onClicked: {
+                root.expanded = false
+                Plasmoid.internalAction("configure").trigger()
+            }
         }
     }
 }
