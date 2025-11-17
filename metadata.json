@@ -1,13 +1,19 @@
 {
     "KPlugin": {
-        "Authors": "Sidali DJEGHBAL"
+        "Authors": [
+            {
+                "Name": "Sidali DJEGHBAL"
+            }
+        ],
         "Category": "Date and Time",
         "Description": "Islamic prayer times with countdown and notifications",
         "Icon": "clock",
         "Id": "org.kde.plasma.prayertimes",
         "Name": "Prayer Times",
         "Version": "1.0",
-        "Website": ""
+        "Website": "",
+        "EnabledByDefault": true
     },
-    "KPackageStructure": "Plasma/Applet"
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API-Minimum-Version": "6.0"
 }
