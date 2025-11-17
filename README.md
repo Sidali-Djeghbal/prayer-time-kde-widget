@@ -14,7 +14,7 @@
 
 ---
 
-## 🕌 Features
+## Features
 
 - **Auto Geolocation** - Automatically detects your location on first use
 - **Precise Prayer Times** - Uses latitude/longitude for accurate calculations
