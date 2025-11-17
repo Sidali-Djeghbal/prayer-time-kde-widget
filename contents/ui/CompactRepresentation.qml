@@ -2,12 +2,13 @@ import QtQuick
 import QtQuick.Layouts
 import org.kde.plasma.components as PlasmaComponents3
 import org.kde.plasma.plasmoid
+import org.kde.kirigami as Kirigami
 
 Item {
     id: compact
     
-    Layout.minimumWidth: label.implicitWidth + 20
-    Layout.minimumHeight: label.implicitHeight + 10
+    Layout.minimumWidth: column.implicitWidth + Kirigami.Units.smallSpacing * 2
+    Layout.minimumHeight: column.implicitHeight + Kirigami.Units.smallSpacing * 2
     
     property bool showWarning: root.secondsUntilNext <= (root.notificationMinutes * 60)
     
@@ -17,22 +18,23 @@ Item {
     }
     
     ColumnLayout {
+        id: column
         anchors.centerIn: parent
         spacing: 2
         
         PlasmaComponents3.Label {
             id: label
-            text: root.nextPrayer
-            font.pixelSize: 11
+            text: root.getPrayerName(root.nextPrayer)
+            font.pixelSize: Kirigami.Theme.defaultFont.pixelSize * 0.9
             font.bold: compact.showWarning
-            color: compact.showWarning ? "#ff6b6b" : "white"
+            color: compact.showWarning ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor
             Layout.alignment: Qt.AlignHCenter
         }
         
         PlasmaComponents3.Label {
             text: root.formatCountdown(root.secondsUntilNext)
-            font.pixelSize: 9
-            color: compact.showWarning ? "#ff6b6b" : "lightgray"
+            font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+            color: compact.showWarning ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.disabledTextColor
             Layout.alignment: Qt.AlignHCenter
         }
     }
@@ -40,7 +42,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: "transparent"
-        border.color: compact.showWarning ? "#ff6b6b" : "transparent"
+        border.color: compact.showWarning ? Kirigami.Theme.negativeTextColor : "transparent"
         border.width: 2
         radius: 4
         visible: compact.showWarning
