@@ -168,9 +168,9 @@ Choose the calculation method that matches your region or preference:
 
 ## Screenshots
 
-![Panel View](screenshots/1.png)
-![Panel View](screenshots/1.png)
-![Popup View](screenshots/3.png)
+<img src="screenshots/1.png" />
+<img src="screenshots/2.png" />
+<img src="screenshots/3.png" />
 
 ---
 
