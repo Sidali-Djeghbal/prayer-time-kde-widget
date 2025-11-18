@@ -10,8 +10,8 @@ KCM.SimpleKCM {
     property alias cfg_apiService: apiServiceCombo.currentValue
     property alias cfg_city: cityField.text
     property alias cfg_country: countryField.text
-    property alias cfg_latitude: latField.value
-    property alias cfg_longitude: lonField.value
+    property alias cfg_latitude: latField.realValue
+    property alias cfg_longitude: lonField.realValue
     property alias cfg_calculationMethod: methodCombo.currentIndex
     property alias cfg_notificationMinutes: notificationSpinBox.value
     property alias cfg_useArabic: arabicCheckBox.checked
@@ -90,26 +90,50 @@ KCM.SimpleKCM {
             
             QQC2.SpinBox {
                 id: latField
-                from: -9000
-                to: 9000
+                from: -900000
+                to: 900000
                 stepSize: 1
                 editable: true
                 Layout.preferredWidth: Kirigami.Units.gridUnit * 8
                 
                 property int decimals: 4
-                property real realValue: value / 10000
+                property int scale: 10000
+                property bool internalChange: false
+                property real realValue: 0
                 
                 validator: DoubleValidator {
-                    bottom: Math.min(latField.from, latField.to)
-                    top:  Math.max(latField.from, latField.to)
+                    bottom: -90
+                    top: 90
+                    decimals: latField.decimals
                 }
                 
                 textFromValue: function(value, locale) {
-                    return Number(value / 10000).toLocaleString(locale, 'f', latField.decimals)
+                    var shownValue = value / latField.scale
+                    return Number(shownValue).toLocaleString(locale, 'f', latField.decimals)
                 }
                 
                 valueFromText: function(text, locale) {
-                    return Number.fromLocaleString(locale, text) * 10000
+                    var num = Number.fromLocaleString(locale, text)
+                    if (isNaN(num)) {
+                        return value
+                    }
+                    return Math.round(num * latField.scale)
+                }
+                
+                onValueChanged: {
+                    if (internalChange)
+                        return
+                    internalChange = true
+                    realValue = value / scale
+                    internalChange = false
+                }
+                
+                onRealValueChanged: {
+                    if (internalChange)
+                        return
+                    internalChange = true
+                    value = Math.round(realValue * scale)
+                    internalChange = false
                 }
                 
                 QQC2.ToolTip.visible: hovered
@@ -123,26 +147,50 @@ KCM.SimpleKCM {
             
             QQC2.SpinBox {
                 id: lonField
-                from: -18000
-                to: 18000
+                from: -1800000
+                to: 1800000
                 stepSize: 1
                 editable: true
                 Layout.preferredWidth: Kirigami.Units.gridUnit * 8
                 
                 property int decimals: 4
-                property real realValue: value / 10000
+                property int scale: 10000
+                property bool internalChange: false
+                property real realValue: 0
                 
                 validator: DoubleValidator {
-                    bottom: Math.min(lonField.from, lonField.to)
-                    top:  Math.max(lonField.from, lonField.to)
+                    bottom: -180
+                    top: 180
+                    decimals: lonField.decimals
                 }
                 
                 textFromValue: function(value, locale) {
-                    return Number(value / 10000).toLocaleString(locale, 'f', lonField.decimals)
+                    var shownValue = value / lonField.scale
+                    return Number(shownValue).toLocaleString(locale, 'f', lonField.decimals)
                 }
                 
                 valueFromText: function(text, locale) {
-                    return Number.fromLocaleString(locale, text) * 10000
+                    var num = Number.fromLocaleString(locale, text)
+                    if (isNaN(num)) {
+                        return value
+                    }
+                    return Math.round(num * lonField.scale)
+                }
+                
+                onValueChanged: {
+                    if (internalChange)
+                        return
+                    internalChange = true
+                    realValue = value / scale
+                    internalChange = false
+                }
+                
+                onRealValueChanged: {
+                    if (internalChange)
+                        return
+                    internalChange = true
+                    value = Math.round(realValue * scale)
+                    internalChange = false
                 }
                 
                 QQC2.ToolTip.visible: hovered
@@ -245,9 +293,13 @@ KCM.SimpleKCM {
                 if (xhr.status === 200) {
                     try {
                         var response = JSON.parse(xhr.responseText)
-                        if (response.latitude && response.longitude) {
-                            latField.value = Math.round(response.latitude * 10000)
-                            lonField.value = Math.round(response.longitude * 10000)
+                        if (response.latitude !== undefined && response.longitude !== undefined) {
+                            var lat = Number(response.latitude)
+                            var lon = Number(response.longitude)
+                            if (!isNaN(lat) && !isNaN(lon)) {
+                                latField.realValue = Number(lat.toFixed(4))
+                                lonField.realValue = Number(lon.toFixed(4))
+                            }
                             cityField.text = response.city || ""
                             countryField.text = response.country_name || ""
                             locationStatus.text = "✓ Location detected: " + response.city + ", " + response.country_name
@@ -297,9 +349,13 @@ KCM.SimpleKCM {
                 if (xhr2.status === 200) {
                     try {
                         var response = JSON.parse(xhr2.responseText)
-                        if (response.latitude && response.longitude) {
-                            latField.value = Math.round(parseFloat(response.latitude) * 10000)
-                            lonField.value = Math.round(parseFloat(response.longitude) * 10000)
+                        if (response.latitude !== undefined && response.longitude !== undefined) {
+                            var lat2 = Number.parseFloat(response.latitude)
+                            var lon2 = Number.parseFloat(response.longitude)
+                            if (!isNaN(lat2) && !isNaN(lon2)) {
+                                latField.realValue = Number(lat2.toFixed(4))
+                                lonField.realValue = Number(lon2.toFixed(4))
+                            }
                             cityField.text = response.city || ""
                             countryField.text = response.country || ""
                             locationStatus.text = "✓ Location detected: " + response.city + ", " + response.country

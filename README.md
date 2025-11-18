@@ -168,9 +168,10 @@ Choose the calculation method that matches your region or preference:
 
 ## Screenshots
 
-<img src="screenshots/1.png" />
-<img src="screenshots/2.png" />
-<img src="screenshots/3.png" />
+<img src="screenshots/1a.png" />
+<img src="screenshots/2a.png" />
+<img src="screenshots/3a.png" />
+
 
 ---
 

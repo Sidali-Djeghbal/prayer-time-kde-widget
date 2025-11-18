@@ -28,6 +28,23 @@ PlasmoidItem {
     property int calculationMethod: Plasmoid.configuration.calculationMethod || 3
     property int notificationMinutes: Plasmoid.configuration.notificationMinutes || 15
     property bool useArabic: Plasmoid.configuration.useArabic || false
+    property string timeZoneId: getLocalTimeZone()
+    readonly property var calculationMethodIds: [
+        0,  // Shia Ithna-Ansari
+        1,  // University of Islamic Sciences, Karachi
+        2,  // Islamic Society of North America (ISNA)
+        3,  // Muslim World League (MWL)
+        4,  // Umm Al-Qura University, Makkah
+        5,  // Egyptian General Authority of Survey
+        7,  // Institute of Geophysics, University of Tehran
+        8,  // Gulf Region
+        9,  // Kuwait
+        10, // Qatar
+        11, // Majlis Ugama Islam Singapura
+        12, // Union Organization Islamic de France
+        13, // Diyanet İşleri Başkanlığı, Turkey
+        14  // Spiritual Administration of Muslims of Russia
+    ]
     
     property var arabicPrayerNames: {
         "Fajr": "الفجر",
@@ -57,6 +74,7 @@ PlasmoidItem {
     }
     
     Component.onCompleted: {
+        ensureValidCoordinates()
         // only fetch location if not set, otherwise just fetch prayer times
         if (latitude === 0 && longitude === 0 && !locationFetched) {
             console.log("Location not set, skipping auto-fetch")
@@ -176,6 +194,7 @@ PlasmoidItem {
     }
     
     function fetchPrayerTimes() {
+        ensureValidCoordinates()
         if (latitude === 0 && longitude === 0) {
             console.log("Location not set, cannot fetch prayer times")
             return
@@ -192,6 +211,73 @@ PlasmoidItem {
         // save fetch date
         Plasmoid.configuration.lastFetchDate = new Date().toString()
     }
+
+    function ensureValidCoordinates() {
+        var normalizedLat = normalizeCoordinate(latitude, 90)
+        var normalizedLon = normalizeCoordinate(longitude, 180)
+
+        if (normalizedLat !== latitude) {
+            latitude = normalizedLat
+            Plasmoid.configuration.latitude = normalizedLat
+            console.log("Normalized latitude from stored value")
+        }
+
+        if (normalizedLon !== longitude) {
+            longitude = normalizedLon
+            Plasmoid.configuration.longitude = normalizedLon
+            console.log("Normalized longitude from stored value")
+        }
+    }
+
+    function normalizeCoordinate(value, maxAbs) {
+        if (!value || !isFinite(value)) {
+            return 0
+        }
+
+        var absVal = Math.abs(value)
+        if (absVal <= maxAbs) {
+            return value
+        }
+
+        // Older versions stored coordinates scaled by 10000 via SpinBoxes.
+        var scaledValue = value / 10000
+        absVal = Math.abs(scaledValue)
+        if (absVal <= maxAbs) {
+            return scaledValue
+        }
+
+        // Clamp anything else to the valid range
+        return value > 0 ? maxAbs : -maxAbs
+    }
+
+    function getLocalTimeZone() {
+        var locale = Qt.locale()
+        if (locale && locale.timeZoneId && locale.timeZoneId.length > 0) {
+            return locale.timeZoneId
+        }
+
+        // Fallback to Qt formatted timezone text (e.g. GMT+02:00)
+        var tzText = Qt.formatDateTime(new Date(), "t")
+        if (tzText && tzText.length > 0) {
+            return tzText
+        }
+
+        // Last resort: derive from numeric offset
+        var offsetMinutes = new Date().getTimezoneOffset()
+        var sign = offsetMinutes <= 0 ? "+" : "-"
+        var absMinutes = Math.abs(offsetMinutes)
+        var hours = Math.floor(absMinutes / 60)
+        var minutes = absMinutes % 60
+        return "UTC" + sign + String(hours).padStart(2, '0') + ":" + String(minutes).padStart(2, '0')
+    }
+
+    function getApiCalculationMethod() {
+        var idx = calculationMethod
+        if (idx < 0 || idx >= calculationMethodIds.length) {
+            idx = 3
+        }
+        return calculationMethodIds[idx] || 3
+    }
     
     function fetchFromAladhan() {
         var xhr = new XMLHttpRequest()
@@ -199,10 +285,14 @@ PlasmoidItem {
         var timestamp = Math.floor(date.getTime() / 1000)
         
         // using coordinates for more precise times
-        var url = "http://api.aladhan.com/v1/timings/" + timestamp + 
+        var url = "https://api.aladhan.com/v1/timings/" + timestamp + 
                   "?latitude=" + latitude + 
                   "&longitude=" + longitude + 
-                  "&method=" + calculationMethod
+                  "&method=" + getApiCalculationMethod()
+
+        if (timeZoneId) {
+            url += "&timezonestring=" + encodeURIComponent(timeZoneId)
+        }
         
         console.log("Fetching from Al-Adhan: " + url)
         
@@ -251,7 +341,11 @@ PlasmoidItem {
         var url = "https://api.salahhour.com/v1/prayer-times?lat=" + latitude + 
                   "&lng=" + longitude + 
                   "&date=" + dateStr + 
-                  "&method=" + calculationMethod
+                  "&method=" + getApiCalculationMethod()
+
+        if (timeZoneId) {
+            url += "&timezone=" + encodeURIComponent(timeZoneId)
+        }
         
         xhr.open("GET", url)
         xhr.onreadystatechange = function() {

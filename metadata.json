@@ -2,15 +2,14 @@
     "KPlugin": {
         "Authors": [
             {
-                "Name": "Sidali DJEGHBAL",
-                "Github": "Sidali-Djeghbal",
-                "Name": "Void Shell 777",
-                "Github": "VoidShell777"
-
+                "Name": "Sidali DJEGHBAL"
+            },
+            {
+                "Name": "Void Shell 777"
             }
         ],
         "Category": "Date and Time",
-        "Description": "Islamic prayer times with countdown and notifications",
+        "Description": "Islamic prayer times",
         "Icon": "clock",
         "Id": "org.kde.plasma.prayertimes",
         "Name": "Prayer Times",
