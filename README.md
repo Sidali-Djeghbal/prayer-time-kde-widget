@@ -350,7 +350,7 @@ This project is licensed under the GNU General Public License v3.0 - see the LIC
 
 ## Changelog
 
-### Version 1.0 (2024-11-17)
+### Version 1.0 (2025-11-17)
 
 #### Features
 -  Auto geolocation
